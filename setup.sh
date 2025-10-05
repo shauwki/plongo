@@ -27,5 +27,5 @@ fi
 
 echo ""
 echo "--- ✅ Setup voltooid! ---"
-echo "Je kunt de services nu starten met: docker compose up -d"
+echo "Je kunt de services nu starten met: docker compose up -d --build --force-recreate"
 echo ""

@@ -1,20 +1,22 @@
 services:
   web:
+    container_name: plongo_website
     build: ./web
-    restart: always
+    restart: unless-stopped
     volumes:
       - ./web/html:/var/www/html 
     networks:
       - plongo-network
-      
+
   redis:
     image: redis:alpine
-    restart: always
+    container_name: plongo_redis_db
+    restart: unless-stopped
     networks:
       - plongo-network
   nextcloud_db:
     image: postgres:15
-    restart: always
+    restart: unless-stopped
     volumes:
       - ./nextcloud/db:/var/lib/postgresql/data
     environment:
@@ -26,7 +28,8 @@ services:
 
   nextcloud:
     image: nextcloud:apache
-    restart: always
+    container_name: plongo_nextcloud
+    restart: unless-stopped
     volumes:
       - ./nextcloud/html:/var/www/html
       - /home/devki/Nextcloud:/var/www/html/data
@@ -46,7 +49,7 @@ services:
 
   n8n_db:
     image: postgres:14
-    container_name: n8n_db
+    container_name: plongo_n8n_db
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${N8N_DB_USER}
@@ -85,7 +88,7 @@ services:
   homeassistant:
     image: ghcr.io/home-assistant/home-assistant:stable
     container_name: plongo_homeassistant
-    restart: always
+    restart: unless-stopped
     volumes:
       - ./homeassistant:/config 
       - /etc/localtime:/etc/localtime:ro
@@ -93,14 +96,14 @@ services:
       - plongo-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8123"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
   jellyfin:
     image: jellyfin/jellyfin
     container_name: plongo_jellyfin
-    restart: always
+    restart: unless-stopped
     environment:
       - PUID=1000
       - PGID=1000
@@ -116,16 +119,50 @@ services:
     networks:
       - plongo-network
 
+  obsidian:
+    build: ./obsidian
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./obsidian:/notes
+    networks:
+      - plongo-network
+    environment:
+      - OBSIDIAN_API_KEY=${OBSIDIAN_API_KEY}
+
+  mqtt:
+    image: eclipse-mosquitto:latest
+    container_name: plongo_mqtt
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    ports:
+      - "1883:1883" 
+      - "9001:9001" 
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./mqtt/config:/mosquitto/config
+      - ./mqtt/data:/mosquitto/data
+      - ./mqtt/log:/mosquitto/log
+    networks:
+      - plongo-network
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: plongo_cloudflared
     restart: unless-stopped
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
-      - web
-      - n8n
-      - homeassistant
-      - jellyfin
+      homeassistant:
+        condition: service_healthy
+      n8n:
+        condition: service_started # or service_completed_successfully idk
+      mqtt:
+        condition: service_started
     networks:
       - plongo-network
 

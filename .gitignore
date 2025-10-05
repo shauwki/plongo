@@ -26,6 +26,7 @@ homeassistant/.HA_ADDONS_VERSION
 homeassistant/home-assistant_v2.db
 homeassistant/.HA_ADDON_*
 homeassistant/home-assistant.log
+homeassistant/home-assistant_v2-*
 homeassistant/home-assistant.log.*
 homeassistant/home-assistant.*
 homeassistant/home-assistant_*
@@ -44,3 +45,11 @@ jellyfin/config/
 nextcloud/db/
 nextcloud/html/
 !nextcloud/README.md
+
+# OBSIDIAN
+obsidian/notes/
+
+# MQTT
+!mqtt/config/
+mqtt/data/
+mqtt/log/

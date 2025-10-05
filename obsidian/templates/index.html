@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="nl" class="h-full bg-gray-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obsidian Notes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="h-full text-gray-200">
+    <div class="flex h-full">
+        <aside class="w-1/4 bg-gray-800 p-4 border-r border-gray-700 flex flex-col">
+            <h1 class="text-2xl font-bold mb-4">Mijn Notities</h1>
+            <div class="mb-4">
+                <input type="password" id="apiKey" placeholder="Plak API Key hier" class="w-full bg-gray-700 text-white p-2 rounded border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div id="file-tree" class="flex-grow overflow-y-auto">
+                </div>
+            <button id="newNoteBtn" class="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Nieuwe Notitie
+            </button>
+        </aside>
+
+        <main class="w-3/4 flex flex-col">
+            <div id="editor-container" class="flex-grow p-4 flex flex-col hidden">
+                <div class="flex justify-between items-center mb-2">
+                    <span id="current-note-path" class="text-gray-400"></span>
+                    <div>
+                        <button id="saveBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm">Opslaan</button>
+                        <button id="deleteBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm">Verwijderen</button>
+                    </div>
+                </div>
+                <textarea id="note-content" class="w-full flex-grow bg-gray-900 text-gray-200 p-4 rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"></textarea>
+            </div>
+            <div id="welcome-message" class="flex-grow flex items-center justify-center">
+                <p class="text-gray-500">Selecteer een notitie om te beginnen of maak een nieuwe aan.</p>
+            </div>
+        </main>
+    </div>
+
+<script>
+    // --- ELEMENTEN SELECTEREN ---
+    const apiKeyInput = document.getElementById('apiKey');
+    const fileTreeContainer = document.getElementById('file-tree');
+    const newNoteBtn = document.getElementById('newNoteBtn');
+    const editorContainer = document.getElementById('editor-container');
+    const welcomeMessage = document.getElementById('welcome-message');
+    const currentNotePathEl = document.getElementById('current-note-path');
+    const noteContentEl = document.getElementById('note-content');
+    const saveBtn = document.getElementById('saveBtn');
+    const deleteBtn = document.getElementById('deleteBtn');
+
+    let currentPath = null;
+
+    // --- MOCKUP DATA (NIEUW) ---
+    const mockFileTree = [{ name: 'Hallo daar.md', type: 'file', path: 'Hallo daar.md' }];
+    const mockNoteContent = { 'Hallo daar.md': 'Doei.' };
+    // --- EINDE MOCKUP DATA ---
+
+    // Functie om de API-sleutel op te halen
+    const getApiKey = () => apiKeyInput.value.trim();
+
+    // Functie om een API-request te doen
+    async function apiFetch(endpoint, options = {}) {
+        const key = getApiKey();
+        if (!key) {
+            alert('API Key is verplicht!');
+            throw new Error('API Key is missing');
+        }
+        options.headers = { ...options.headers, 'Authorization': `Bearer ${key}` };
+        const response = await fetch(endpoint, options);
+        if (!response.ok) {
+            const error = await response.json();
+            alert(`Error: ${error.message || 'Onbekende fout'}`);
+            throw new Error(error.message);
+        }
+        return response.json();
+    }
+
+    // Laadt de volledige bestandsstructuur
+    async function loadNoteList() {
+        try {
+            // Zet de UI terug naar de beginstaat
+            editorContainer.classList.add('hidden');
+            welcomeMessage.classList.remove('hidden');
+            // Laad de echte data
+            const tree = await apiFetch('/notes');
+            fileTreeContainer.innerHTML = renderTree(tree);
+        } catch (e) {
+            // Als het laden mislukt (bijv. foute key), toon weer de mockup
+            displayInitialState();
+        }
+    }
+    
+    // Render de boomstructuur
+    function renderTree(nodes, level = 0) {
+        let html = '<ul class="text-sm">';
+        nodes.forEach(node => {
+            const padding = level * 15;
+            if (node.type === 'directory') {
+                html += `<li style="padding-left: ${padding}px" class="font-bold text-gray-400 mt-2">${node.name}</li>`;
+                html += renderTree(node.children, level + 1);
+            } else {
+                html += `<li style="padding-left: ${padding}px"><a href="#" data-path="${node.path}" class="block py-1 px-2 rounded hover:bg-gray-700 transition-colors duration-150">${node.name}</a></li>`;
+            }
+        });
+        html += '</ul>';
+        return html;
+    }
+
+    // Laadt de inhoud van een specifieke notitie
+    async function loadNoteContent(path) {
+        const key = getApiKey();
+        // Als er geen API key is, probeer mockup data te laden (NIEUW)
+        if (!key) {
+            if (mockNoteContent[path]) {
+                currentPath = path;
+                currentNotePathEl.textContent = path;
+                noteContentEl.value = mockNoteContent[path];
+                editorContainer.classList.remove('hidden');
+                welcomeMessage.classList.add('hidden');
+            }
+            return;
+        }
+
+        // Als er wel een key is, laad via de API
+        try {
+            const data = await apiFetch(`/notes/${path}`);
+            currentPath = path;
+            currentNotePathEl.textContent = path;
+            noteContentEl.value = data.content;
+            editorContainer.classList.remove('hidden');
+            welcomeMessage.classList.add('hidden');
+        } catch (e) {
+            alert('Kon notitie niet laden.');
+        }
+    }
+    
+    // --- (Functies saveNote, deleteNote, en de newNoteBtn event listener blijven ongewijzigd) ---
+    async function saveNote() { /* ... ongewijzigd ... */ }
+    async function deleteNote() { /* ... ongewijzigd ... */ }
+    newNoteBtn.addEventListener('click', async () => { /* ... ongewijzigd ... */ });
+
+    // Functie om de mockup data te tonen bij het laden (NIEUW)
+    function displayInitialState() {
+        fileTreeContainer.innerHTML = renderTree(mockFileTree);
+    }
+
+    // Event listeners
+    apiKeyInput.addEventListener('change', loadNoteList);
+    fileTreeContainer.addEventListener('click', (e) => {
+        if (e.target.tagName === 'A') {
+            e.preventDefault();
+            loadNoteContent(e.target.dataset.path);
+        }
+    });
+    saveBtn.addEventListener('click', saveNote);
+    deleteBtn.addEventListener('click', deleteNote);
+
+    // Toon de mockup data wanneer de pagina laadt (NIEUW)
+    displayInitialState();
+</script>
+</body>
+</html>

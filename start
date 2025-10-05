@@ -1,0 +1,13 @@
+#!/bin/bash
+OS_TYPE=$(uname -s)
+
+if [ "$OS_TYPE" = "Linux" ]; then
+    echo "Linux gedetecteerd. Starten met Linux-configuratie..."
+    docker compose -f docker-compose.yml -f docker-compose.linux.yml up -d
+elif [ "$OS_TYPE" = "Darwin" ]; then
+    echo "macOS gedetecteerd. Starten met macOS-configuratie..."
+    docker compose -f docker-compose.yml -f docker-compose.mac.yml up -d
+else
+    echo "Figure it out, sorry bro. No xp of -> $OS_TYPE"
+    exit 1
+fi

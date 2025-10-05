@@ -8,4 +8,6 @@ composer.lock
 web/html/
 web/html/*
 
-n8n/
+n8n/n8n_config
+n8n/postgres_data
+!n8n/README.md

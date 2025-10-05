@@ -1,0 +1,63 @@
+services:
+
+  web:
+    build: ./web
+    restart: always
+    volumes:
+      - ./web/html:/var/www/html 
+    networks:
+      - plongo-network
+
+  n8n_db:
+    image: postgres:14
+    container_name: n8n_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${N8N_DB_USER}
+      - POSTGRES_PASSWORD=${N8N_DB_PASSWORD}
+      - POSTGRES_DB=${N8N_DB_NAME}
+    volumes:
+      - ./n8n/postgres_data:/var/lib/postgresql/data
+    networks:
+      - plongo-network
+
+  n8n:
+    image: n8nio/n8n
+    container_name: n8n
+    restart: unless-stopped
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=n8n_db
+      - DB_POSTGRESDB_DATABASE=${N8N_DB_NAME}
+      - DB_POSTGRESDB_USER=${N8N_DB_USER}
+      - DB_POSTGRESDB_PASSWORD=${N8N_DB_PASSWORD}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      - N8N_HOST=${N8N_URL}
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://${N8N_URL}
+      - GENERIC_TIMEZONE=Europe/Amsterdam
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+    depends_on:
+      - n8n_db
+    volumes:
+      - ./n8n/n8n_config:/home/node/.n8n
+    networks:
+      - plongo-network
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    # depends_on:
+    #   pangolin:
+    #     condition: service_healthy
+    networks:
+      - plongo-network
+
+networks:
+  plongo-network:
+    name: plongo-network
+    driver: bridge

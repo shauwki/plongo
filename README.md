@@ -9,7 +9,7 @@ In tegenstelling tot commerciële diensten biedt Plongo je volledige controle ov
 Om Plongo op te zetten na het clonen van de repository, volg je deze stappen:<br/>
 1.  **Clone de repository:**
     ```bash
-    git clone [https://github.com/shauwki/plongo.git](https://github.com/shauwki/plongo.git) # Pas de URL aan naar jouw repository
+    git clone https://github.com/shauwki/plongo.git
     cd plongo
     ```
 2.  **Maak de benodigde directories aan:**<br/>

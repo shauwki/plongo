@@ -1,0 +1,27 @@
+# --- Web Server Configuratie ---
+WEB_URL="plongo.nl"
+N8N_URL="n8n.plongo.nl"
+NEXTCLOUD_URL="cloud.plongo.nl"
+HOMEASSISTANT_URL="has.plongo.nl"
+
+# --- Nextcloud ---
+NEXTCLOUD_DB_USER="nextcloud"
+NEXTCLOUD_DB_NAME="nextcloud"
+NEXTCLOUD_DB_PASSWORD="dE3bK2mQ7!tT9K2#vF"
+
+# --- MQTT Server Configuratie ---
+MQTT_USER="mqtt_user"
+MQTT_PASSWORD="mQ7!tT9$bK2#vF*4gH&p"
+
+# --- n8n Inloggegevens (Basic Auth) ---
+N8N_BASIC_AUTH_USER="plongo_nl"
+N8N_BASIC_AUTH_PASSWORD="aB1!cV2$dE3#fG*4hI&j_n0n"
+
+# --- n8n Database Configuratie ---
+N8N_DB_NAME="plongo_db"
+N8N_DB_USER="plongo_db_user"
+N8N_DB_PASSWORD="gH5*jK6$rL7!mN&8oP#q_n0n"
+
+# --- Cloudflare Tunnel Configuratie ---
+CLOUDFLARE_TUNNEL_TOKEN="eyJhIjoiOGE1YTIwMTg1YjhiNTgzNTE1Yjg2MWViZDAwYTE5NTAiLCJ0IjoiOGVkZGZiM2QtNzk2Yy00OTM1LTlhNjYtNzQ5MDk0ZTcyNDY3IiwicyI6IllUTm1aalpoT0RJdE16VmtNeTAwTTJVMExXSTJZekl0T1dFd05UVXpNVEEwTURRNCJ9"
+# sudo cloudflared service install 

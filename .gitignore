@@ -50,6 +50,7 @@ nextcloud/html/
 obsidian/notes/
 
 # MQTT
-!mqtt/config/
+!mqtt/config/mosquitto.conf
+mqtt/config/passwd
 mqtt/data/
 mqtt/log/

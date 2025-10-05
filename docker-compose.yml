@@ -1,11 +1,17 @@
 services:
-  # --- Redis Service (for nc) ---
+  web:
+    build: ./web
+    restart: always
+    volumes:
+      - ./web/html:/var/www/html 
+    networks:
+      - plongo-network
+      
   redis:
     image: redis:alpine
     restart: always
     networks:
       - plongo-network
-  # --- Nextcloud Services ---
   nextcloud_db:
     image: postgres:15
     restart: always
@@ -21,8 +27,6 @@ services:
   nextcloud:
     image: nextcloud:apache
     restart: always
-    # ports:
-    #   - "8080:80"
     volumes:
       - ./nextcloud/html:/var/www/html
       - /home/devki/Nextcloud:/var/www/html/data
@@ -37,13 +41,6 @@ services:
       - OVERWRITEPROTOCOL=https
     depends_on:
       - nextcloud_db
-    networks:
-      - plongo-network
-  web:
-    build: ./web
-    restart: always
-    volumes:
-      - ./web/html:/var/www/html 
     networks:
       - plongo-network
 

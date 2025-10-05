@@ -27,6 +27,8 @@ homeassistant/home-assistant_v2.db
 homeassistant/.HA_ADDON_*
 homeassistant/home-assistant.log
 homeassistant/home-assistant.log.*
+homeassistant/home-assistant.*
+homeassistant/home-assistant_*
 homeassistant/.storage/
 homeassistant/.cloud/
 homeassistant/custom_components/

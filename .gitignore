@@ -5,9 +5,40 @@ composer.lock
 .env
 !example.env
 
+# WEB
 web/html/
 web/html/*
 
-n8n/n8n_config
-n8n/postgres_data
+# N8N
+n8n/n8n_config/
+n8n/postgres_data/
 !n8n/README.md
+
+# HASS
+homeassistant/deps/
+homeassistant/tts/
+homeassistant/blueprints/
+homeassistant/.HA_VERSION
+homeassistant/.HA_CORE_VERSION
+homeassistant/.HA_CUSTOM_COMPONENTS_VERSION
+homeassistant/.HA_SUPERVISOR_VERSION
+homeassistant/.HA_ADDONS_VERSION
+homeassistant/home-assistant_v2.db
+homeassistant/.HA_ADDON_*
+homeassistant/home-assistant.log
+homeassistant/home-assistant.log.*
+homeassistant/.storage/
+homeassistant/.cloud/
+homeassistant/custom_components/
+homeassistant/media/
+homeassistant/www/
+
+# JELLYFIN
+jellyfin/cache/
+jellyfin/config/
+!jellyfin/README.md
+
+# NEXTCLOUD
+nextcloud/db/
+nextcloud/html/
+!nextcloud/README.md

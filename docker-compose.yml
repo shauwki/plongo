@@ -1,5 +1,44 @@
 services:
+  # --- Redis Service (for nc) ---
+  redis:
+    image: redis:alpine
+    restart: always
+    networks:
+      - plongo-network
+  # --- Nextcloud Services ---
+  nextcloud_db:
+    image: postgres:15
+    restart: always
+    volumes:
+      - ./nextcloud/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${NEXTCLOUD_DB_NAME}
+      - POSTGRES_USER=${NEXTCLOUD_DB_USER}
+      - POSTGRES_PASSWORD=${NEXTCLOUD_DB_PASSWORD} 
+    networks:
+      - plongo-network
 
+  nextcloud:
+    image: nextcloud:apache
+    restart: always
+    # ports:
+    #   - "8080:80"
+    volumes:
+      - ./nextcloud/html:/var/www/html
+      - /home/devki/Nextcloud:/var/www/html/data
+    environment:
+      - POSTGRES_HOST=nextcloud_db
+      - POSTGRES_DB=${NEXTCLOUD_DB_NAME}
+      - POSTGRES_USER=${NEXTCLOUD_DB_USER}
+      - POSTGRES_PASSWORD=${NEXTCLOUD_DB_PASSWORD} 
+      - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_URL}
+      - NEXTCLOUD_TRUSTED_PROXIES=cloudflared
+      - OVERWRITEHOST=${NEXTCLOUD_URL}
+      - OVERWRITEPROTOCOL=https
+    depends_on:
+      - nextcloud_db
+    networks:
+      - plongo-network
   web:
     build: ./web
     restart: always
@@ -23,7 +62,7 @@ services:
 
   n8n:
     image: n8nio/n8n
-    container_name: n8n
+    container_name: plongo_n8n
     restart: unless-stopped
     environment:
       - DB_TYPE=postgresdb
@@ -46,14 +85,50 @@ services:
     networks:
       - plongo-network
 
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: plongo_homeassistant
+    restart: always
+    volumes:
+      - ./homeassistant:/config 
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - plongo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8123"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: plongo_jellyfin
+    restart: always
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Amsterdam
+    ports:
+      - "8096:8096"
+      - "8920:8920"
+    volumes:
+      - ./jellyfin/config:/config
+      - ./jellyfin/cache:/cache
+      - /mnt/4tb/services/jelly/shows:/media/shows
+      - /mnt/4tb/services/jelly/movies:/media/movies
+    networks:
+      - plongo-network
+
   cloudflared:
     image: cloudflare/cloudflared:latest
-    container_name: cloudflared
+    container_name: plongo_cloudflared
     restart: unless-stopped
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    # depends_on:
-    #   pangolin:
-    #     condition: service_healthy
+    depends_on:
+      - web
+      - n8n
+      - homeassistant
+      - jellyfin
     networks:
       - plongo-network
 

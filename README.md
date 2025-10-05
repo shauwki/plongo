@@ -1,173 +1,113 @@
-# Dumpert Kutter
+# Plongo - Home Automation & Personal Cloud
 
 ## Context
-Dit project, liefkozend "Dumpert Kutter" (cutter, snapte?), begon als een persoonlijk zijproject om specifiek de "reeten" uit DumpertReeten-video's te kunnen extraheren en analyseren. Wat begon als een hulpmiddel voor een niche-gebruik, is inmiddels uitgegroeid tot een veelzijdige open-source tool speciaal voor jou.<br/>
-De `Dumpert Kutter` maakt het gemakkelijk om video's te downloaden, te transcriberen, en vervolgens op basis van gesproken woorden of zinnen video compilaties te maken. De kern van de geavanceerde functionaliteit ligt in de **`kut`**-functie, die hieronder uitgebreid wordt toegelicht.
+Welkom bij Plongo, jouw persoonlijke en self-hosted controlecentrum voor domotica en digitale diensten! Dit project is een geavanceerde Docker Compose-configuratie die een robuust ecosysteem van open-source applicaties orkestreert. Van huisautomatisering tot persoonlijke cloudopslag en mediastreaming, Plongo brengt al jouw favoriete diensten samen op één veilige en controleerbare plek.<br/>
+In tegenstelling tot commerciële diensten biedt Plongo je volledige controle over je data en workflows, met een focus op privacy en flexibiliteit.
 
 ## Installatie
 
-Om Dumpert Kutter te installeren na het clonen van de repository, volg je deze stappen:<br/>
-1.  **Clone cut:**
+Om Plongo op te zetten na het clonen van de repository, volg je deze stappen:<br/>
+1.  **Clone de repository:**
     ```bash
-    git clone https://github.com/shauwki/dumpert-kut.git
-    cd dumpert-kut
+    git clone [https://github.com/shauwki/plongo.git](https://github.com/shauwki/plongo.git) # Pas de URL aan naar jouw repository
+    cd plongo
     ```
+2.  **Maak de benodigde directories aan:**<br/>
+    Deze mappen zullen dienen als persistente opslag voor de configuratie en data van je diensten.
+    ```bash
+    mkdir -p nextcloud/db nextcloud/html n8n/postgres_data n8n/n8n_config obsidian homeassistant mqtt/config mqtt/data mqtt/log jellyfin/config jellyfin/cache web/piksel/html web/plongo/html
+    ```
+3.  **Configureer je `.env` bestand:**<br/>
+    Maak een nieuw bestand genaamd `.env` in de root van je project. Dit bestand bevat alle geheime en omgevingsvariabelen voor je diensten. Vul de waarden in met jouw gewenste gebruikersnamen, wachtwoorden en tokens. Een voorbeeld van de benodigde variabelen vind je hieronder:
+    ```
+    # Voor Nextcloud
+    NEXTCLOUD_DB_NAME=nextcloud_db
+    NEXTCLOUD_DB_USER=nextcloud_user
+    NEXTCLOUD_DB_PASSWORD=jouw_nextcloud_db_wachtwoord
 
-2.  **Run de setup met geduld:**<br/>
-    Dit script controleert op systeemafhankelijkheden (zoals `python3`, `ffmpeg`, `git`), maakt een Python virtuele omgeving (`venv`) aan, installeert alle benodigde Python-pakketten uit `requirements.txt` (inclusief `whisperX` en `demucs`), en maakt de executables uitvoerbaar.
-    ```bash
-    chmod +x setup.sh
-    ./setup.sh
+    # Voor n8n
+    N8N_DB_NAME=n8n_db
+    N8N_DB_USER=n8n_user
+    N8N_DB_PASSWORD=jouw_n8n_db_wachtwoord
+    N8N_BASIC_AUTH_USER=n8n_admin
+    N8N_BASIC_AUTH_PASSWORD=jouw_n8n_wachtwoord
+    N8N_URL=n8n.jouwdomein.nl # Of het IP-adres van je host als je geen domein gebruikt
+
+    # Voor Jellyfin (optioneel, afhankelijk van je systeemgebruiker)
+    PUID=1000 # Jouw user ID (vind met: id -u jouwgebruikersnaam)
+    PGID=1000 # Jouw group ID (vind met: id -g jouwgebruikersnaam)
+    TZ=Europe/Amsterdam # Jouw tijdzone
+
+    # Voor Cloudflare Tunnel
+    CLOUDFLARE_TUNNEL_TOKEN=jouw_cloudflare_tunnel_token
+
+    # Voor MQTT (optioneel, als je PUID/PGID via environment variabelen wilt instellen)
+    # PUID=${PUID}
+    # PGID=${PGID}
+    # TZ=${TZ}
     ```
-    Na succesvolle installatie ben je klaar om de tool te gebruiken.
+4.  **Start alle services:**<br/>
+    Met je `.env` bestand geconfigureerd, kun je Docker Compose de rest laten doen. De `-d` vlag zorgt ervoor dat de containers op de achtergrond draaien.
+    ```bash
+    docker compose up -d
+    ```
+    Na succesvolle installatie en start zijn al je services actief.
 
 ## Configuratie
-De Dumpert Kutter-tool werkt met video's die in de `videos/` map in de root van het project worden geplaatst.<br/>
-* **Videobestanden:** De `setup.sh` haalt geen videobestanden voor je op. Je dient je `.mp4`-videobestanden handmatig in de `videos/` map te plaatsen (of in submappen daarbinnen). Of de in-house downloader gebruiken.
-* **WhisperX Taal:** Het WhisperX-model is standaard afgestemd op Nederlands (`--language nl`), maar kan handmatig worden aangepast in `src/transcriber.py` als je met andere talen wilt werken.
+De configuratie van je Plongo-setup is grotendeels gedefinieerd in het `docker-compose.yml` bestand en het `.env` bestand.<br/>
+* **`.env` Bestand:** Dit is de centrale plek voor al je gevoelige informatie en omgevingsspecifieke instellingen. Zorg ervoor dat dit bestand **niet** wordt gecommit naar je Git-repository (het is al toegevoegd aan de `.gitignore`).<br/>
+* **Volumemaps:** De meeste diensten gebruiken lokale mappen voor persistente opslag van data en configuratie (bijv. `./nextcloud/db`, `./n8n/postgres_data`, `./jellyfin/config`). Controleer en pas deze paden indien nodig aan, vooral voor grote mediabibliotheken zoals Jellyfin (`/mnt/4tb/services/jelly/shows` en `/mnt/4tb/services/jelly/movies`) of Nextcloud data (`/home/devki/Nextcloud/data`).<br/>
+* **Cloudflare Tunnel:** Configureer je Cloudflare Tunnel via het Cloudflare dashboard om externe toegang tot je diensten te routeren. De `CLOUDFLARE_TUNNEL_TOKEN` in je `.env` is essentieel hiervoor.
 
 ## Usage
-De `dumpert` CLI biedt verschillende commando's voor diverse taken:<br/>
-Alle commando's worden uitgevoerd via `./dumpert [commando] [opties] [argumenten]`.
 
-### `download`
-Download video's of playlists van YouTube (of andere ondersteunde bronnen) naar de `videos/` map.
-**Voorbeeld:**
-```bash
-./dumpert download "https://www.youtube.com/playlist?list=PLMe_6SSHyqcYh032ZieiNHW8bwusy7FPJ"
-```
-_(Ik heb hier de link naar alle dumpert-reeten videos van Dumpert gebruikt :)_
+De `Plongo` setup biedt de volgende services:<br/>
 
-### `transcribe`
-Transcribeert videobestanden naar JSON-transcripties met WhisperX. Ondersteunt verschillende modi voor kwaliteit versus snelheid.
-**Opties:**
-- `--prompt <tekst>`: Een hint voor de transcribeer-engine om de nauwkeurigheid te verbeteren (bijv. veelvoorkomende termen als reten, reeten).
-- `--mode <modus>`: Kies de transcriptie-modus.
-    - `standard` (standaard): Gebruikt de ingebouwde VAD (Voice Activity Detection) van WhisperX. Snel en vaak voldoende.
-    - `demucs`: Gebruikt `demucs` om eerst zang/spraak van muziek te scheiden, en transcribeert daarna alleen de zang. Dit is de langzaamste maar meest accurate methode voor video's met achtergrondmuziek.  
+### Home Assistant
+Jouw centrale hub voor domotica, toegankelijk via de Cloudflare Tunnel.
+* **Toegang:** Via de door jou geconfigureerde Cloudflare Tunnel.<br/>
+* **Configuratie:** Sla je Home Assistant configuratie op in de `./homeassistant` map.
+* **Health Check:** De `cloudflared` service wacht tot Home Assistant volledig is opgestart en gezond is voordat het de tunnel initieert.
 
-_Alles wat ik tot nu toe heb getranscribeerd upload ik bij iedere push mee dan hoef jij het niet te doen. Ik heb er aardig veel, dus jij hoeft alleen de videos te downloaden met deze exacte cmd: `./dumpert download [link van dumpertreeten videos]`_
-- **Transcribeer een hele map (standaard modus):**
-    ``` bash
-    ./dumpert transcribe videos/
-    ```
-- **Transcribeer een specifieke video met een prompt:**
-    ``` bash
-    ./dumpert transcribe videos/een_aflevering/mijn_video.mp4 --prompt "DumpertReeten, dumpert, reeten, raten"
-    ```
-    _(--prompt zijn dus woorden waar de transcriber meer op let, ofzoiets (initial prompt))_
-- **Transcribeer met Demucs voor hoge kwaliteit:**
-    ``` bash
-    ./dumpert transcribe videos/ --mode demucs
-    ```
-_(Ik run transcribe met --mode demucs meestal op de achtergrond in een tweede terminal terwijl ik de tool gebruik. Over-time heb je meer en meer data, des te meer videos je download. Mijn GPU is niet zo krachtig, maar downloaden van 100GB videos duurde kort vergeleken met alles transcriben. Dat duurde dagen bij mij, dus succes!)_
+### n8n
+Een krachtige workflow-automatiseringstool. Creëer complexe integraties en automatiseringen die verder gaan dan je domotica.
+* **Toegang:** Via de door jou geconfigureerde Cloudflare Tunnel (gebruik de `N8N_URL` uit je `.env` bestand).<br/>
+* **Authenticatie:** Beveiligd met Basic Auth (gebruik `N8N_BASIC_AUTH_USER` en `N8N_BASIC_AUTH_PASSWORD` uit je `.env`).
 
-### `kut`
-Dit is de meest precieze functie. Het zoekt naar exacte woorden of zinnen en knipt die chirurgisch uit de video's, met respect voor de exacte start- en eindtijden van die specifieke woorden.
-**Opties:**
-- `--pre <seconden>`: Voeg extra seconden toe vóór de start van de clip.
-- `--post <seconden>`: Voeg extra seconden toe ná het einde van de de clip.
-- `--randomize -r`: Schud de gevonden clips in willekeurige volgorde voordat de video wordt gemaakt.
-- `--create -k`: Genereer de compilatievideo (anders alleen een analyse).
-**Voorbeelden:**
-- **Zoek en analyseer precieze woordfragmenten:**
-    ``` bash
-    ./dumpert kut "vijf reten"
-    ```
-- **Genereer een compilatie van meerdere, exact geknipte termen, gerandomiseerd:**
-    ``` bash
-    ./dumpert kut "vijf reten" "twee reten" "drie raten" -k -r
-    ```
-- **Creëer een video van een langere precieze zin:**
-    ``` bash
-    ./dumpert kut "ik geef het negen reten" -k
-    ```
+### Nextcloud
+Jouw persoonlijke cloudopslag, alternatief voor Dropbox/Google Drive.
+* **Toegang:** Standaard toegankelijk op poort `8080` van je host (`http://localhost:8080`), tenzij je dit routeert via Cloudflare Tunnel.<br/>
+* **Data:** Je Nextcloud data wordt opgeslagen in `/home/devki/Nextcloud/data` op je host. Pas dit pad aan naar jouw voorkeur.
 
-### `zoek`
-Vindt en compileert hele segmenten waarin een zoekterm voorkomt. Dit werkt in principe hetzelfde als kut, maar knipt niet zoals kut. Hierbij zul je een soortgelijke resultaat krijgen, maar bij sommige clips krijg je nog een comment voor of na je zoekterm. Ook leuke resultaten. _Let op: geen randomizer, komt misschien ooit n keer._
-**Opties:**
-- `--directory -d <pad>`: De map om te doorzoeken (standaard: `videos/`).
-- `--pre <seconden>`: Voeg extra seconden toe vóór de start van de clip.
-- `--post <seconden>`: Voeg extra seconden toe ná het einde van de clip.
-- `--create -k`: Genereer de compilatievideo (anders alleen een analyse).
-**Voorbeelden:**
-- **Zoek naar een term en analyseer de resultaten:**
-    ``` bash
-    ./dumpert zoek "tien reten"
-    ```
-- **Creëer een compilatievideo van gevonden zinnen:**
-    ``` bash
-    ./dumpert zoek "vijf reten" -k
-    ```
-- **Zoek en genereer met extra marge:**
-    ``` bash
-    ./dumpert zoek "ik geef het negen reten" -k --pre 0.5 --post 0.2
-    ```
+### Obsidian (Notes)
+Host je persoonlijke Obsidian notities.
+* **Toegang:** Standaard toegankelijk op poort `5412` van je host (`http://localhost:5412`), tenzij gerouteerd via Cloudflare Tunnel.<br/>
+* **Configuratie:** Je Obsidian vault bevindt zich in de `./obsidian` map.
 
-### `zeg`
-Bouwt een video-compilatie van een complete gegeven zin, woord-voor-woord, door losse woorden uit de videobibliotheek samen te voegen. Het maximale aantal zinnen dat kan worden opgebouwd, wordt bepaald door het minst gevonden aantal woorden uit de gegeven zin (de "zwakste schakel"). _Deze functie moet ik nog verbeteren. Duurt altijd lang als je veel resultaten hebt. Dus probeer niche woorden te gebruiken voor sneller? resultaat._
-**Opties:**
-- `--pre <seconden>`: Voeg extra seconden toe vóór de start van elk woordfragment.
-- `--post <seconden>`: Voeg extra seconden toe ná het einde van elk woordfragment.
-- `--create -k`: Genereer de compilatievideo (anders alleen een analyse). 
-**Voorbeelden:**
-- **Analyseer hoe vaak elk woord in de zin voorkomt:**
-    ``` bash
-    ./dumpert zeg "hallo jongen en welkom"
-    ```
-- **Creëer een compilatie van de complete zin, opgebouwd uit losse woorden:**
-    ``` bash
-    ./dumpert zeg "hallo meisje en welkom" -k
-    ```
-- **Genereer de zin met aangepaste fragmentlengtes:**
-    ``` bash
-    ./dumpert zeg "een twee drie vier hoedje van papier" -k --pre 0.1 --post 0.1
-    ```
+### Jellyfin (Media Server)
+Jouw persoonlijke mediastreamingplatform. Stream je films en series naar al je apparaten.
+* **Toegang:** Standaard toegankelijk op poort `8096` van je host (`http://localhost:8096`), tenzij gerouteerd via Cloudflare Tunnel.<br/>
+* **Mediabibliotheek:** Configureer de paden naar je films (`/mnt/4tb/services/jelly/movies`) en series (`/mnt/4tb/services/jelly/shows`) op je host. Pas deze aan naar je eigen opslaglocaties.
+
+### MQTT Broker (Mosquitto)
+De communicatiehub voor al je IoT-apparaten en Home Assistant.
+* **Toegang:** Standaard toegankelijk op poort `1883` (standaard MQTT) en `9001` (WebSockets) van je host.
+
+### PHP Webservers (`piksel`, `plongo`)
+Twee aparte webservers voor het hosten van je websites of lokale applicaties.
+* **Configuratie:** Plaats je webbestanden in `./web/piksel/html` en `./web/plongo/html`. Routering via Cloudflare Tunnel is vereist voor externe toegang.
+
+### Cloudflare Tunnel
+Beveiligt en routeert extern verkeer naar je intern gehoste services zonder poorten open te stellen. Dit is de aanbevolen methode voor veilige externe toegang.
+* **Configuratie:** Vereist een `CLOUDFLARE_TUNNEL_TOKEN` in je `.env` bestand en verdere configuratie in het Cloudflare dashboard.
 
 ## Contact
-Voor vragen, suggesties of opmerkingen kun je een e-mail sturen naar [alshauwki@gmail.com](mailto:alshauwki@gmail.com?subject=Dumpert%20Kutter&body=Jo%20maat,%20).
+Voor vragen, suggesties of opmerkingen kun je een e-mail sturen naar [alshauwki@gmail.com](mailto:alshauwki@gmail.com?subject=Plongo%20Setup&body=Hoi,%20).
+
 ## Mijn Setup
-- **CPU:** AMD Ryzen 7 1800X
-- **RAM:** 16.0 GB 3.60 GHz
-- **GPU:** NVIDIA GeForce GTX 1660 Ti (6 GB)<-- die 6GB was m'n limiet op deze GPU. Echter, snel genoeg voor mij)
-- **OS:** x64-based processor (Ubuntu 24.04 LTS)
-    
-**Let op:** Deze tool kan veel resources verbruiken, met name de transcriptie- en demucs-stappen. Zorg voor een krachtig systeem (bij voorkeur met een goede GPU) voor de beste prestaties. De tool is ontwikkeld op Linux, maar zou op de meeste UNIX-achtige systemen (zoals macOS met M-chip) moeten werken. Maar mijn M1 MBpro was traag. As of now, moet ik nog testen hoe ffmpeg het doet met compileren. Transcriberen kon ik in mijn geval over laten aan mijn broertjes oude game-pc. Ik moet nog 230/438-ish afleveringen transcriberen. 
+-   **CPU:** AMD Ryzen 7 1800X
+-   **RAM:** 16.0 GB 3.60 GHz
+-   **GPU:** NVIDIA GeForce GTX 1660 Ti (6 GB)
+-   **OS:** x64-based processor (Ubuntu 24.04 LTS)
 
-
-# Voorbeeld resultaten
-
-[![Halloo](https://img.youtube.com/vi/ZWEb3xTyTRA/0.jpg)](https://www.youtube.com/watch?v=ZWEb3xTyTRA)
-```bash
-./dumpert kut "hallo allemaal" "welkom allemaal" "hallo" -kr
-```
------
-[![Dumpert Reeten voorbeeld output](https://img.youtube.com/vi/7BvqmrFZrHE/0.jpg)](https://www.youtube.com/watch?v=7BvqmrFZrHE)
-```bash
-./dumpert kut "dumpertreten" -k -r
-```
------
-[![nul reten voor mijn voorbeelden:p](https://img.youtube.com/vi/cYIxwT0rwqk/0.jpg)](https://www.youtube.com/watch?v=cYIxwT0rwqk)
-```bash
-./dumpert zeg "nul reten"
-```
------
-[![lange compilatie van 5 reeten](https://img.youtube.com/vi/Z3BwtRlV1JI/0.jpg)](https://www.youtube.com/watch?v=Z3BwtRlV1JI)
-```bash
-./dumpert kut "vijf reten" "vijf rate" "vijf raten" "vijf reeten" -kr
-```
------
-[![mixed reetings](https://img.youtube.com/vi/N4gVH1Bbh6M/0.jpg)](https://www.youtube.com/watch?v=N4gVH1Bbh6M)
-```bash
-./dumpert kut "nul reten" "een reet" "twee reten" "drie reten" "vier reten" "vijf reten" "nul reeten" "vier reeten" "vijf reeten" -kr --limit "25;100"
-```
------
-[![homooooo, dit was een culturele keuze x ly](https://img.youtube.com/vi/PeWKg4v9n4k/0.jpg)](https://www.youtube.com/watch?v=PeWKg4v9n4k)
-```bash
-./dumpert kut "homo" -k -r
-```
------
-[![thema bleef ff hangen, sorrry](https://img.youtube.com/vi/FD1iC_Hmnc8/0.jpg)](https://www.youtube.com/watch?v=FD1iC_Hmnc8)
-```bash
-./dumpert kut flikker -kr
-```
+**Let op:** Het draaien van meerdere services kan aanzienlijke systeembronnen verbruiken. Zorg voor voldoende RAM, CPU-kracht en opslag. Overweeg een SSD voor de data-volumes van databases voor optimale prestaties.

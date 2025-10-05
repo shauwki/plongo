@@ -51,6 +51,6 @@ obsidian/notes/
 
 # MQTT
 !mqtt/config/mosquitto.conf
-mqtt/config/passwd
+mqtt/config/pwdfile
 mqtt/data/
 mqtt/log/

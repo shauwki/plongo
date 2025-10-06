@@ -25,6 +25,8 @@ services:
       - POSTGRES_PASSWORD=${NEXTCLOUD_DB_PASSWORD} 
     networks:
       - plongo-network
+    depends_on:
+      - redis
 
   nextcloud:
     image: nextcloud:apache
@@ -78,6 +80,9 @@ services:
       - WEBHOOK_URL=https://${N8N_URL}
       - GENERIC_TIMEZONE=Europe/Amsterdam
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_TRUST_PROXY=true
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     depends_on:
       - n8n_db
     volumes:

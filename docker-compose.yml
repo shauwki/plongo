@@ -25,8 +25,11 @@ services:
       - POSTGRES_PASSWORD=${NEXTCLOUD_DB_PASSWORD} 
     networks:
       - plongo-network
-    depends_on:
-      - redis
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   nextcloud:
     image: nextcloud:apache
@@ -36,6 +39,8 @@ services:
       - ./nextcloud/html:/var/www/html
       - /home/devki/Nextcloud:/var/www/html/data
     environment:
+      - PUID=1000
+      - PGID=1000
       - POSTGRES_HOST=nextcloud_db
       - POSTGRES_DB=${NEXTCLOUD_DB_NAME}
       - POSTGRES_USER=${NEXTCLOUD_DB_USER}
@@ -44,10 +49,21 @@ services:
       - NEXTCLOUD_TRUSTED_PROXIES=cloudflared
       - OVERWRITEHOST=${NEXTCLOUD_URL}
       - OVERWRITEPROTOCOL=https
+      - REDIS_HOST=redis
+      - REDIS_HOST_PORT=6379
     depends_on:
-      - nextcloud_db
+      nextcloud_db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - plongo-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/status.php || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
 
   n8n_db:
     image: postgres:14
@@ -80,9 +96,10 @@ services:
       - WEBHOOK_URL=https://${N8N_URL}
       - GENERIC_TIMEZONE=Europe/Amsterdam
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
-      - N8N_TRUST_PROXY=true
       - N8N_RUNNERS_ENABLED=true
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - N8N_TRUSTED_PROXIES=plongo_cloudflared
+      - NODE_OPTIONS=--max-old-space-size=1024
     depends_on:
       - n8n_db
     volumes:
@@ -94,6 +111,8 @@ services:
     image: ghcr.io/home-assistant/home-assistant:stable
     container_name: plongo_homeassistant
     restart: unless-stopped
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=1024
     volumes:
       - ./homeassistant:/config 
       - /etc/localtime:/etc/localtime:ro
@@ -113,6 +132,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Europe/Amsterdam
+      - NODE_OPTIONS=--max-old-space-size=1024
     ports:
       - "8096:8096"
       - "8920:8920"
@@ -135,6 +155,7 @@ services:
       - plongo-network
     environment:
       - OBSIDIAN_API_KEY=${OBSIDIAN_API_KEY}
+      - NODE_OPTIONS=--max-old-space-size=512
 
   mqtt:
     image: eclipse-mosquitto:latest
@@ -168,8 +189,12 @@ services:
         condition: service_started # or service_completed_successfully idk
       mqtt:
         condition: service_started
+      nextcloud:
+        condition: service_healthy
     networks:
       - plongo-network
+    environment:
+      - NODE_OPTIONS=--max-old-space-size=1024
 
 networks:
   plongo-network:

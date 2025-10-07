@@ -4,6 +4,7 @@ composer.lock
 
 .env
 !example.env
+postgres_data/
 
 # WEB
 web/html/
@@ -15,6 +16,7 @@ n8n/postgres_data/
 !n8n/README.md
 
 # HASS
+.ha_run.lock
 homeassistant/deps/
 homeassistant/tts/
 homeassistant/blueprints/
@@ -54,3 +56,9 @@ obsidian/notes/
 mqtt/config/pwdfile
 mqtt/data/
 mqtt/log/
+
+# OLLAMA
+!ollama/README.md
+ollama_data/
+ollama/models/
+ollama/id_ed*

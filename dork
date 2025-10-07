@@ -1,0 +1,171 @@
+#!/bin/bash
+
+# DORK - Docker Orchestrator script
+# Beheert de plongo docker-compose stack met profielen en shortcuts.
+
+# --- Kleurcodes voor output ---
+RESET='\033[0m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+CYAN='\033[0;36m'
+RED='\033[0;31m'
+
+# --- Service Profielen ---
+PROFILE_MINIMAL="web redis nextcloud_db nextcloud n8n_db n8n homeassistant mqtt obsidian"
+PROFILE_MEDIA="jellyfin"
+# 'max' profiel is speciaal: het pakt alle services uit docker-compose.yml
+
+# --- Functies ---
+
+# Functie om de help-tekst te tonen
+usage() {
+    # (Help-tekst is ongewijzigd, voor de beknoptheid hier weggelaten)
+    echo -e "${YELLOW}DORK - Docker Orchestrator voor de Plongo Stack${RESET}"
+    echo ""
+    echo -e "${CYAN}GEBRUIK:${RESET}"
+    echo -e "  ./dork.sh ${GREEN}<profiel|service>${RESET} ${CYAN}<actie>${RESET} [opties]"
+    echo -e "  ./dork.sh ${GREEN}<globaal commando>${RESET}"
+    echo ""
+    echo -e "${CYAN}PROFIELEN:${RESET}"
+    echo -e "  ${GREEN}minimal${RESET}     Start de essentiële services (n8n, nextcloud, web, etc.)"
+    echo -e "  ${GREEN}media${RESET}       Start de media-gerelateerde services (jellyfin)"
+    echo -e "  ${GREEN}max${RESET}         Start alle services gedefinieerd in de docker-compose.yml"
+    echo ""
+    echo -e "${CYAN}ACTIES (voor profielen/services):${RESET}"
+    echo -e "  ${CYAN}up${RESET}          Start de services in de achtergrond (-d)"
+    echo -e "  ${CYAN}down${RESET}        Stopt de services"
+    echo -e "  ${CYAN}restart${RESET}     Herstart de services"
+    echo -e "  ${CYAN}logs${RESET}        Toont de logs van de services (volgt met -f)"
+    echo ""
+    echo -e "${CYAN}OPTIES (te combineren met 'up'):${RESET}"
+    echo -e "  ${CYAN}-r${RESET}          Forceert het her-aanmaken van containers (--force-recreate)"
+    echo -e "  ${CYAN}-b${RESET}          Bouwt de images opnieuw voordat de containers starten (--build)"
+    echo ""
+    echo -e "${CYAN}GLOBALE COMMANDO'S:${RESET}"
+    echo -e "  ${GREEN}ps${RESET}          Toont de status van alle containers in de stack"
+    echo -e "  ${GREEN}stop${RESET}        Stopt ALLE services in de stack (gelijk aan 'docker compose down')"
+    echo -e "  ${GREEN}pull${RESET}        Pullt de laatste images voor alle services"
+    echo ""
+    echo -e "${CYAN}VOORBEELDEN:${RESET}"
+    echo -e "  ./dork.sh minimal up"
+    echo -e "  ./dork.sh max up -r -b"
+    echo -e "  ./dork.sh n8n restart"
+    echo -e "  ./dork.sh ps"
+    exit 1
+}
+
+# --- NIEUWE FUNCTIE ---
+# Deze functie voert 'docker compose' uit en filtert specifiek de
+# "variable is not set" waarschuwingen uit de error output (stderr).
+# Andere foutmeldingen worden wel gewoon doorgelaten.
+run_compose() {
+    docker compose "$@" 2> >(grep -v 'variable is not set. Defaulting to a blank string.' >&2)
+}
+
+
+# --- Script Logica ---
+
+# Controleer of er argumenten zijn
+if [ "$#" -eq 0 ]; then
+    usage
+fi
+
+# Pak het eerste argument (profiel, service, of globaal commando)
+TARGET=$1
+shift # Verwijder het eerste argument, de rest is nu $1, $2, etc.
+
+# Hoofd 'case' statement voor de verschillende targets
+case $TARGET in
+    # --- Globale Commando's ---
+    ps)
+        echo -e "${GREEN}---> Status van de Plongo stack...${RESET}"
+        run_compose ps
+        ;;
+    start)
+        echo -e "${RED}---> Stoppen van ALLE services in de Plongo stack...${RESET}"
+        run_compose up -d --force-recreate --build 
+        ;;
+    stop)
+        echo -e "${RED}---> Stoppen van ALLE services in de Plongo stack...${RESET}"
+        run_compose down
+        ;;
+    pull)
+        echo -e "${GREEN}---> Pulling latest images for all services...${RESET}"
+        run_compose pull
+        ;;
+
+    # --- Profielen en Services ---
+    minimal|max|media|web|redis|nextcloud_db|nextcloud|n8n_db|n8n|homeassistant|jellyfin|obsidian|mqtt|ollama|cloudflared)
+        ACTION=$1
+        if [ -z "$ACTION" ]; then
+            echo -e "${RED}Fout: Geen actie (up, down, restart, logs) opgegeven voor target '${TARGET}'.${RESET}"
+            usage
+        fi
+        shift # Verwijder de actie, de rest zijn opties
+
+        # Bepaal welke services we gaan beheren
+        SERVICES=""
+        case $TARGET in
+            minimal)
+                SERVICES="${PROFILE_MINIMAL} cloudflared"
+                ;;
+            media)
+                SERVICES="${PROFILE_MEDIA} cloudflared"
+                ;;
+            max)
+                SERVICES=""
+                ;;
+            *)
+                SERVICES=$TARGET
+                ;;
+        esac
+
+        # Bepaal de actie
+        case $ACTION in
+            up)
+                COMPOSE_OPTS="-d"
+                for opt in "$@"; do
+                    case $opt in
+                        -r) COMPOSE_OPTS+=" --force-recreate" ;;
+                        -b) COMPOSE_OPTS+=" --build" ;;
+                        *) echo -e "${RED}Onbekende optie: $opt${RESET}"; usage ;;
+                    esac
+                done
+                echo -e "${GREEN}---> Starten van services [${YELLOW}${TARGET}${GREEN}] met opties [${YELLOW}${COMPOSE_OPTS}${GREEN}]...${RESET}"
+                # shellcheck disable=SC2086
+                run_compose up $COMPOSE_OPTS $SERVICES
+                ;;
+            down)
+                echo -e "${YELLOW}---> Stoppen van services [${CYAN}${TARGET}${YELLOW}]...${RESET}"
+                # shellcheck disable=SC2086
+                run_compose down $SERVICES
+                ;;
+            restart)
+                echo -e "${YELLOW}---> Herstarten van services [${CYAN}${TARGET}${YELLOW}]...${RESET}"
+                # shellcheck disable=SC2086
+                run_compose restart $SERVICES
+                ;;
+            logs)
+                echo -e "${YELLOW}---> Logs volgen voor services [${CYAN}${TARGET}${YELLOW}]...${RESET}"
+                # shellcheck disable=SC2086
+                # We filteren hier GEEN output, want je wilt juist alle logs en fouten zien.
+                docker compose logs -f $SERVICES
+                ;;
+            *)
+                echo -e "${RED}Fout: Onbekende actie '${ACTION}'.${RESET}"
+                usage
+                ;;
+        esac
+        ;;
+
+    # --- Help en onbekende commando's ---
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        echo -e "${RED}Fout: Onbekend commando of profiel '${TARGET}'.${RESET}"
+        usage
+        ;;
+esac
+
+echo -e "${GREEN}--- ✅ Dork commando uitgevoerd ---${RESET}"
